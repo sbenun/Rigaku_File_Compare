@@ -8,9 +8,10 @@ import filecmp
 import zipfile
 
 # Define paths for the folders to be compared
-backup_folder = (r'C:\ProgramData\XwinSys\Backup\SBN_test')
-folder_under_test = (r'C:\ProgramData\XwinSys\XwinSys_ini')
-test_folder_permissions = (r'C:\Program Files\XwinSys\2.14.0.101')
+zipped_dir = r'C:\ProgramData\XwinSys\Backup\XwinSys_ini_01_12_2025_09_13_55.zip'
+backup_zipped_folder = r'C:\ProgramData\XwinSys\Backup\SBN_test'
+latest_build_xWinSys_ini = r'C:\ProgramData\XwinSys\XwinSys_ini'
+# test_folder_permissions = (r'C:\Program Files\XwinSys\2.14.0.101')
 
 # Initialize lists to store comparison results
 dir1_list = []
@@ -18,8 +19,20 @@ dir2_list = []
 differ_list = []
 
 # Function placeholder for potential zip file extraction (currently not implemented)
-def extracting_dir(dir1):
-    None
+def extracting_dir(zip_file_path, destination_folder):
+    try:
+        with zipfile.ZipFile(zipped_dir,'r') as zip_ref:
+            print(f'Extracting content of {zipped_dir}')
+        # temp_dir = zip_ref.extractall
+            zip_ref.extractall(backup_zipped_folder)
+            print(f'Extraction complete. Files extracted to: {backup_zipped_folder}')
+            return True
+    except zipfile.BadZipfile:
+        print("The file is not a valid zip archive.")
+        return False
+    except Exception as e:
+        print(f'Error occurred: {e}')
+        return False
 
 
 # Function to recursively compare two directories
@@ -50,13 +63,14 @@ def compare_folders(dir1, dir2):
         compare_folders(new_dir1, new_dir2)
 
 
-# Call the extraction function (currently does nothing)
-extracting_dir(backup_folder)
+# Call the extraction function
+if extracting_dir(zipped_dir, backup_zipped_folder):
 
-# Perform the folder comparison
-compare_folders(backup_folder, folder_under_test)
+    # Perform the folder comparison
+    compare_folders(backup_zipped_folder, latest_build_xWinSys_ini)
 
 # Print the results of the comparison
+print('\nComparison Results:')
 print(f' - Files or folders that appears only on the backup folder {dir1_list}')
-print(f' - Files or folders that appears only on the folder under test {dir2_list}')
+print(f' - Files or folders that appears only on the new build folder {dir2_list}')
 print(f' - Files or folders  that differ: {differ_list}')
