@@ -1,31 +1,21 @@
-##########################################################
-#This script suppose to perform folder and file comparison
-#between 2 builds
-###########################################################
+#####################################################################
+# This script performs folder and file comparison
+# between 2 builds, the old build which stored as a zip file
+# and the new one. The comparison is between the XwinSys_ini folders
+#####################################################################
 
 import os
 import filecmp
 import zipfile
 
-# Define paths for the folders to be compared
-zipped_dir = r'C:\ProgramData\XwinSys\Backup\XwinSys_ini_01_12_2025_09_13_55.zip'
-backup_zipped_folder = r'C:\ProgramData\XwinSys\Backup\SBN_test'
-latest_build_xWinSys_ini = r'C:\ProgramData\XwinSys\XwinSys_ini'
-# test_folder_permissions = (r'C:\Program Files\XwinSys\2.14.0.101')
 
-# Initialize lists to store comparison results
-dir1_list = []
-dir2_list = []
-differ_list = []
-
-# Function placeholder for potential zip file extraction (currently not implemented)
+# Function for zip file extraction
 def extracting_dir(zip_file_path, destination_folder):
     try:
-        with zipfile.ZipFile(zipped_dir,'r') as zip_ref:
-            print(f'Extracting content of {zipped_dir}')
-        # temp_dir = zip_ref.extractall
-            zip_ref.extractall(backup_zipped_folder)
-            print(f'Extraction complete. Files extracted to: {backup_zipped_folder}')
+        with zipfile.ZipFile(zip_file_path,'r') as zip_ref:
+            print(f'Extracting content of {zip_file_path}')
+            zip_ref.extractall(destination_folder)
+            print(f'Extraction complete. Files extracted to: {destination_folder}')
             return True
     except zipfile.BadZipfile:
         print("The file is not a valid zip archive.")
@@ -36,22 +26,23 @@ def extracting_dir(zip_file_path, destination_folder):
 
 
 # Function to recursively compare two directories
-def compare_folders(dir1, dir2):
+def compare_folders(dir1, dir2, dir1_list, dir2_list, differ_list):
     # Create a directory comparison object
     comparison = filecmp.dircmp(dir1, dir2)
 
     # Find files/folders only in dir1 (backup_folder)
     for name in comparison.left_only:
-        dir1_list.append(name)
+        dir1_list.extend(comparison.left_only)
 
     # Find files/folders only in dir2 (folder_under_test)
     for name in comparison.right_only:
-        dir2_list.append(name)
+        dir2_list.extend(comparison.right_only)
 
     # Compare contents of files that exist in both directories
     for name in comparison.common_files:
         file1 = os.path.join(dir1, name)
         file2 = os.path.join(dir2, name)
+
         # If file contents differ, add to differ_list
         if not filecmp.cmp(file1, file2, shallow=False):
             differ_list.append(name)
@@ -60,17 +51,53 @@ def compare_folders(dir1, dir2):
     for subdir in comparison.common_dirs:
         new_dir1 = os.path.join(dir1, subdir)
         new_dir2 = os.path.join(dir2, subdir)
-        compare_folders(new_dir1, new_dir2)
+        compare_folders(new_dir1, new_dir2, dir1_list, dir2_list, differ_list)
+
+def main():
+    zip_file_path = input('Enter the path to the ZIP file: ').strip()
+
+    # Append zip extension
+    if not zip_file_path.lower().endswith('.zip'):
+        zip_file_path += '.zip'
+
+    # Check if destination folder exists
+
+    destination_folder = r'C:\ProgramData\XwinSys\Backup\builds_compare_temp'
+    if not os.path.exists(r'C:\ProgramData\XwinSys\Backup\builds_compare_temp'):
+        os.makedirs(destination_folder)
+
+    comparison_folder = r'C:\ProgramData\XwinSys\XwinSys_ini'
+
+    # Validation tests
+    if not os.path.exists(zip_file_path):
+        print("Error: ZIP file does not exist.")
+        return
+
+    if not os.path.exists(destination_folder):
+        print("Error: Destination folder does not exist.")
+        return
+
+    if not os.path.exists(comparison_folder):
+        print("Error: Comparison folder does not exist.")
+        return
+
+    # Initialize lists to store comparison results
+    dir1_list = []
+    dir2_list = []
+    differ_list = []
 
 
-# Call the extraction function
-if extracting_dir(zipped_dir, backup_zipped_folder):
+    # Extract zip file
+    if extracting_dir(zip_file_path, destination_folder):
 
-    # Perform the folder comparison
-    compare_folders(backup_zipped_folder, latest_build_xWinSys_ini)
+        # Perform the folder comparison
+        compare_folders(destination_folder, comparison_folder, dir1_list, dir2_list, differ_list)
 
-# Print the results of the comparison
-print('\nComparison Results:')
-print(f' - Files or folders that appears only on the backup folder {dir1_list}')
-print(f' - Files or folders that appears only on the new build folder {dir2_list}')
-print(f' - Files or folders  that differ: {differ_list}')
+    # Print the results of the comparison
+    print('\nComparison Results:')
+    print(f' - Files or folders that appears only on the backup folder: {dir1_list}')
+    print(f' - Files or folders that appears only on the build under test folder: {dir2_list}')
+    print(f' - Files or folders  that differ: {differ_list}')
+
+if __name__ == '__main__':
+    main()
